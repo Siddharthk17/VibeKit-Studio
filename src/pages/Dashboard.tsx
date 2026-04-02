@@ -1,65 +1,59 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 
 export function Dashboard() {
-  const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     loadPages();
   }, []);
 
-  const loadPages = async () => {
+  const loadPages = () => {
     try {
-      const data = await api.getPages();
+      const data = api.getPages();
       setPages(data.pages);
-    } catch (err: any) {
-      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     try {
-      const data = await api.createPage('My New Page');
+      const data = api.createPage('My New Page');
       navigate(`/app/edit/${data.page.id}`);
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
     }
   };
 
-  const handleDuplicate = async (id: string) => {
+  const handleDuplicate = (page: any) => {
     try {
-      await api.duplicatePage(id);
+      api.duplicatePage(page.id);
       loadPages();
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
     }
   };
 
-  if (authLoading) return null;
-  if (authLoading) return null;
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
+  const handleDelete = (id: string) => {
+    if (!confirm('Delete this page?')) return;
+    try {
+      api.deletePage(id);
+      loadPages();
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
 
   return (
     <div>
-      {/* Nav */}
       <nav style={{ padding: '1rem 0', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Link to="/" style={{ fontWeight: 700, fontSize: '1.25rem' }}>VibeKit Studio</Link>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{user.email}</span>
-            <button onClick={() => { logout(); navigate('/'); }} className="btn btn-outline" style={{ padding: '0.5rem 1rem' }}>Log out</button>
-          </div>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Guest Mode</span>
         </div>
       </nav>
 
@@ -68,8 +62,6 @@ export function Dashboard() {
           <h1 style={{ fontSize: '1.75rem' }}>Your Pages</h1>
           <button onClick={handleCreate} className="btn btn-primary">Create new page</button>
         </div>
-
-        {error && <div style={{ background: '#fef2f2', color: '#dc2626', padding: '0.75rem', borderRadius: 'var(--radius)', marginBottom: '1rem', border: '1px solid #fecaca' }}>{error}</div>}
 
         {loading ? (
           <div style={{ display: 'grid', gap: '1rem' }}>
@@ -103,10 +95,11 @@ export function Dashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <Link to={`/app/edit/${page.id}`} className="btn btn-outline" style={{ padding: '0.5rem 1rem' }}>Edit</Link>
-                  <button onClick={() => handleDuplicate(page.id)} className="btn btn-outline" style={{ padding: '0.5rem 1rem' }} title="Duplicate">Duplicate</button>
+                  <button onClick={() => handleDuplicate(page)} className="btn btn-outline" style={{ padding: '0.5rem 1rem' }}>Duplicate</button>
                   {page.status === 'published' && (
                     <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }}>View</a>
                   )}
+                  <button onClick={() => handleDelete(page.id)} className="btn" style={{ padding: '0.5rem 1rem', color: '#dc2626', border: '1px solid #fecaca', background: '#fef2f2' }}>Delete</button>
                 </div>
               </div>
             ))}

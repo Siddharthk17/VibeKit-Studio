@@ -1,68 +1,58 @@
-const API_BASE = '/api';
-
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    credentials: 'include',
-    ...options,
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed: ${res.status}`);
-  }
-  return data;
-}
+import { store } from './store';
 
 export const api = {
-  signup: (email: string, password: string) =>
-    request<{ user: { id: string; email: string }; token: string }>('/auth-signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+  getPages: () => ({ pages: store.getAll() }),
 
-  login: (email: string, password: string) =>
-    request<{ user: { id: string; email: string }; token: string }>('/auth-login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+  createPage: (title?: string, themeId?: string) => ({ page: store.create(title, themeId) }),
 
-  getPages: () =>
-    request<{ pages: any[] }>('/pages'),
+  getPage: (id: string) => {
+    const page = store.getById(id);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  createPage: (title?: string, themeId?: string) =>
-    request<{ page: any }>('/pages', {
-      method: 'POST',
-      body: JSON.stringify({ title, theme_id: themeId }),
-    }),
+  updatePage: (id: string, data: { title?: string; theme_id?: string; content?: any; slug?: string }) => {
+    const page = store.update(id, data as any);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  getPage: (id: string) =>
-    request<{ page: any }>(`/pages/${id}`),
+  publishPage: (id: string) => {
+    const page = store.publish(id);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  updatePage: (id: string, data: { title?: string; theme_id?: string; content?: any; slug?: string }) =>
-    request<{ page: any }>(`/pages/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+  unpublishPage: (id: string) => {
+    const page = store.unpublish(id);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  publishPage: (id: string) =>
-    request<{ page: any }>(`/pages/${id}/publish`, { method: 'POST' }),
+  duplicatePage: (id: string) => {
+    const page = store.duplicate(id);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  unpublishPage: (id: string) =>
-    request<{ page: any }>(`/pages/${id}/unpublish`, { method: 'POST' }),
+  deletePage: (id: string) => {
+    if (!store.delete(id)) throw new Error('Page not found');
+    return { success: true };
+  },
 
-  duplicatePage: (id: string) =>
-    request<{ page: any }>(`/pages/${id}/duplicate`, { method: 'POST' }),
+  getPublicPage: (slug: string) => {
+    const page = store.getBySlug(slug);
+    if (!page) throw new Error('Page not found');
+    return { page };
+  },
 
-  getPublicPage: (slug: string) =>
-    request<{ page: any }>(`/public/pages/${slug}`),
+  trackView: (slug: string) => {
+    store.trackView(slug);
+    return { success: true };
+  },
 
-  trackView: (slug: string) =>
-    request<{ success: boolean }>(`/public/pages/${slug}/view`, { method: 'POST' }),
-
-  submitContact: (slug: string, data: { name: string; email: string; message: string }) =>
-    request<{ submission: any }>(`/public/pages/${slug}/contact`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  submitContact: (slug: string, data: { name: string; email: string; message: string }) => {
+    if (!store.submitContact(slug, data)) throw new Error('Page not found');
+    return { submission: { ...data, created_at: new Date().toISOString() } };
+  },
 };

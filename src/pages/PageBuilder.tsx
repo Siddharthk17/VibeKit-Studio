@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { themes, getTheme } from '../lib/themes';
-import type { PageContent, ThemePreset } from '../types';
+import type { PageContent } from '../types';
 
 type DeviceView = 'desktop' | 'tablet' | 'mobile';
 
@@ -24,8 +23,7 @@ const defaultContent: PageContent = {
 
 export function PageBuilder() {
   const { id } = useParams<{ id: string }>();
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  
   const [content, setContent] = useState<PageContent>(defaultContent);
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -39,15 +37,13 @@ export function PageBuilder() {
   const [themePickerOpen, setThemePickerOpen] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) { navigate('/login'); return; }
     if (!id) return;
     loadPage();
-  }, [id, user, authLoading]);
+  }, [id]);
 
-  const loadPage = async () => {
+  const loadPage = () => {
     try {
-      const data = await api.getPage(id!);
+      const data = api.getPage(id!);
       const page = data.page;
       setTitle(page.title);
       setSlug(page.slug);
@@ -59,12 +55,12 @@ export function PageBuilder() {
     }
   };
 
-  const savePage = useCallback(async () => {
+  const savePage = useCallback(() => {
     if (!id) return;
     setSaving(true);
     setSaved(false);
     try {
-      await api.updatePage(id, { title, slug, theme_id: themeId, content });
+      api.updatePage(id, { title, slug, theme_id: themeId, content });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err: any) {
@@ -74,20 +70,19 @@ export function PageBuilder() {
     }
   }, [id, title, slug, themeId, content]);
 
-  // Auto-save every 30s
   useEffect(() => {
     const interval = setInterval(savePage, 30000);
     return () => clearInterval(interval);
   }, [savePage]);
 
-  const handlePublish = async () => {
+  const handlePublish = () => {
     if (!id) return;
     try {
       if (status === 'published') {
-        await api.unpublishPage(id);
+        api.unpublishPage(id);
         setStatus('draft');
       } else {
-        await api.publishPage(id);
+        api.publishPage(id);
         setStatus('published');
       }
     } catch (err: any) {
@@ -143,15 +138,13 @@ export function PageBuilder() {
     setContent(prev => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== index) }));
   };
 
-  if (authLoading) return null;
-  if (authLoading) return null;
-  if (!user) return null;
+  const deviceClass = device === 'desktop' ? 'preview-desktop' : device === 'tablet' ? 'preview-tablet' : 'preview-mobile';
+  const buttonClass = `btn btn-${theme.buttonStyle}`;
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       {/* Sidebar Editor */}
       <div style={{ width: '360px', minWidth: '360px', borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--surface)', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Link to="/app" style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>&larr; Dashboard</Link>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -162,7 +155,6 @@ export function PageBuilder() {
           </div>
         </div>
 
-        {/* Page Settings */}
         <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Page Settings</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -208,7 +200,6 @@ export function PageBuilder() {
           </div>
         </div>
 
-        {/* Section Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
           {['hero', 'features', 'gallery', 'contact'].map(section => (
             <button key={section} onClick={() => setActiveSection(section)}
@@ -218,7 +209,6 @@ export function PageBuilder() {
           ))}
         </div>
 
-        {/* Section Editor */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
           {error && <div style={{ background: '#fef2f2', color: '#dc2626', padding: '0.5rem', borderRadius: 'var(--radius)', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
 
@@ -274,7 +264,6 @@ export function PageBuilder() {
 
       {/* Preview Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f3f4f6' }}>
-        {/* Device Toggle */}
         <div style={{ padding: '0.75rem 1.5rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
           {([['desktop', '\uD83D\uDDA5 Desktop'], ['tablet', '\uD83D\uDCF1 Tablet'], ['mobile', '\uD83D\uDCF2 Mobile']] as [DeviceView, string][]).map(([d, label]) => (
             <button key={d} onClick={() => setDevice(d)}
@@ -284,10 +273,73 @@ export function PageBuilder() {
           ))}
         </div>
 
-        {/* Preview Frame */}
         <div style={{ flex: 1, overflow: 'auto', padding: '2rem', display: 'flex', justifyContent: 'center' }}>
-          <div className={`preview-${device}`} style={{ background: theme.colors.background, minHeight: '100%', borderRadius: device !== 'desktop' ? '16px' : '0', boxShadow: device !== 'desktop' ? '0 0 0 1px rgba(0,0,0,0.1)' : 'none', transition: 'max-width 0.3s ease' }}>
-            <PreviewPage content={content} theme={theme} slug={slug} />
+          <div className={deviceClass} style={{ background: theme.colors.background, minHeight: '100%', borderRadius: device !== 'desktop' ? '16px' : '0', boxShadow: device !== 'desktop' ? '0 0 0 1px rgba(0,0,0,0.1)' : 'none', transition: 'max-width 0.3s ease' }}>
+            <div style={{
+              '--bg': theme.colors.background,
+              '--surface': theme.colors.surface,
+              '--text': theme.colors.text,
+              '--text-muted': theme.colors.textMuted,
+              '--accent': theme.colors.accent,
+              '--accent-hover': theme.colors.accentHover,
+              '--border': theme.colors.border,
+              '--heading-font': theme.typography.headingFont,
+              '--body-font': theme.typography.bodyFont,
+              '--radius': theme.radius,
+              '--shadow': theme.shadow,
+              '--section-spacing': theme.spacing.section,
+              '--card-spacing': theme.spacing.card,
+            } as React.CSSProperties}>
+              <section style={{ padding: 'var(--section-spacing) 2rem', textAlign: 'center' }}>
+                <h1 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, fontSize: 'clamp(1.75rem, 4vw, 3rem)', marginBottom: '1rem', color: 'var(--text)' }}>
+                  {content.hero.title || 'Your Title'}
+                </h1>
+                <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 2rem' }}>
+                  {content.hero.subtitle}
+                </p>
+                {content.hero.buttonText && (
+                  <a href={content.hero.buttonUrl} className={buttonClass} style={{ textDecoration: 'none' }}>
+                    {content.hero.buttonText}
+                  </a>
+                )}
+              </section>
+
+              {content.features.length > 0 && (
+                <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                    {content.features.map((f, i) => (
+                      <div key={i} className="card" style={{ background: 'var(--bg)', borderColor: 'var(--border)', borderRadius: 'var(--radius)', padding: 'var(--card-spacing)', boxShadow: 'var(--shadow)' }}>
+                        <h3 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, marginBottom: '0.5rem', color: 'var(--text)' }}>{f.title}</h3>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>{f.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {content.gallery.length > 0 && (
+                <section style={{ padding: 'var(--section-spacing) 2rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    {content.gallery.map((url, i) => (
+                      <img key={i} src={url} alt={`Gallery ${i + 1}`} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: 'var(--radius)' }} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
+                <div style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
+                  <h2 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, marginBottom: '0.5rem' }}>{content.contact.title}</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{content.contact.subtitle}</p>
+                  <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <input className="input" placeholder="Your name" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }} />
+                    <input className="input" type="email" placeholder="Your email" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }} />
+                    <textarea className="input" placeholder="Your message" rows={4} style={{ background: 'var(--bg)', borderColor: 'var(--border)', resize: 'vertical' }} />
+                    <button type="submit" className={buttonClass}>Send Message</button>
+                  </form>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>
@@ -300,82 +352,6 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <div>
       <label style={{ display: 'block', fontSize: '0.75rem', marginBottom: '0.25rem', color: 'var(--text-muted)' }}>{label}</label>
       <input className="input" value={value} onChange={e => onChange(e.target.value)} style={{ fontSize: '0.875rem', padding: '0.5rem' }} />
-    </div>
-  );
-}
-
-function PreviewPage({ content, theme }: { content: PageContent; theme: ThemePreset; slug?: string }) {
-  const buttonClass = `btn btn-${theme.buttonStyle}`;
-
-  return (
-    <div style={{
-      '--bg': theme.colors.background,
-      '--surface': theme.colors.surface,
-      '--text': theme.colors.text,
-      '--text-muted': theme.colors.textMuted,
-      '--accent': theme.colors.accent,
-      '--accent-hover': theme.colors.accentHover,
-      '--border': theme.colors.border,
-      '--heading-font': theme.typography.headingFont,
-      '--body-font': theme.typography.bodyFont,
-      '--radius': theme.radius,
-      '--shadow': theme.shadow,
-      '--section-spacing': theme.spacing.section,
-      '--card-spacing': theme.spacing.card,
-    } as React.CSSProperties}>
-      {/* Hero */}
-      <section style={{ padding: 'var(--section-spacing) 2rem', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, fontSize: 'clamp(1.75rem, 4vw, 3rem)', marginBottom: '1rem', color: 'var(--text)' }}>
-          {content.hero.title || 'Your Title'}
-        </h1>
-        <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 2rem' }}>
-          {content.hero.subtitle}
-        </p>
-        {content.hero.buttonText && (
-          <a href={content.hero.buttonUrl} className={buttonClass} style={{ textDecoration: 'none' }}>
-            {content.hero.buttonText}
-          </a>
-        )}
-      </section>
-
-      {/* Features */}
-      {content.features.length > 0 && (
-        <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-            {content.features.map((f, i) => (
-              <div key={i} className="card" style={{ background: 'var(--bg)', borderColor: 'var(--border)', borderRadius: 'var(--radius)', padding: 'var(--card-spacing)', boxShadow: 'var(--shadow)' }}>
-                <h3 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, marginBottom: '0.5rem', color: 'var(--text)' }}>{f.title}</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9375rem' }}>{f.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Gallery */}
-      {content.gallery.length > 0 && (
-        <section style={{ padding: 'var(--section-spacing) 2rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            {content.gallery.map((url, i) => (
-              <img key={i} src={url} alt={`Gallery ${i + 1}`} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: 'var(--radius)' }} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Contact */}
-      <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
-        <div style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, marginBottom: '0.5rem' }}>{content.contact.title}</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{content.contact.subtitle}</p>
-          <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <input className="input" placeholder="Your name" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }} />
-            <input className="input" type="email" placeholder="Your email" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }} />
-            <textarea className="input" placeholder="Your message" rows={4} style={{ background: 'var(--bg)', borderColor: 'var(--border)', resize: 'vertical' }} />
-            <button type="submit" className={buttonClass}>Send Message</button>
-          </form>
-        </div>
-      </section>
     </div>
   );
 }

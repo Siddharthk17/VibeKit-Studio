@@ -19,13 +19,13 @@ export function PublishedPage() {
     loadPage();
   }, [slug]);
 
-  const loadPage = async () => {
+  const loadPage = () => {
     try {
-      const data = await api.getPublicPage(slug!);
+      const data = api.getPublicPage(slug!);
       setPage(data.page);
       setContent(data.page.content);
       setTheme(getTheme(data.page.theme_id));
-      await api.trackView(slug!);
+      api.trackView(slug!);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -33,13 +33,13 @@ export function PublishedPage() {
     }
   };
 
-  const handleContact = async (e: FormEvent<HTMLFormElement>) => {
+  const handleContact = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!slug || !content) return;
     const form = e.currentTarget;
     const formData = new FormData(form);
     try {
-      await api.submitContact(slug, {
+      api.submitContact(slug, {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         message: formData.get('message') as string,
@@ -87,7 +87,6 @@ export function PublishedPage() {
       '--section-spacing': theme.spacing.section,
       '--card-spacing': theme.spacing.card,
     } as React.CSSProperties}>
-      {/* Hero */}
       <section style={{ padding: 'var(--section-spacing) 2rem', textAlign: 'center' }}>
         <div className="container">
           <h1 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, fontSize: 'clamp(1.75rem, 4vw, 3rem)', marginBottom: '1rem', color: 'var(--text)' }}>
@@ -104,7 +103,6 @@ export function PublishedPage() {
         </div>
       </section>
 
-      {/* Features */}
       {content.features.length > 0 && (
         <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
           <div className="container">
@@ -120,7 +118,6 @@ export function PublishedPage() {
         </section>
       )}
 
-      {/* Gallery */}
       {content.gallery.length > 0 && (
         <section style={{ padding: 'var(--section-spacing) 2rem' }}>
           <div className="container">
@@ -133,7 +130,6 @@ export function PublishedPage() {
         </section>
       )}
 
-      {/* Contact */}
       <section style={{ padding: 'var(--section-spacing) 2rem', background: 'var(--surface)' }}>
         <div className="container" style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontFamily: 'var(--heading-font)', fontWeight: theme.typography.headingWeight, marginBottom: '0.5rem' }}>{content.contact.title}</h2>
@@ -154,7 +150,6 @@ export function PublishedPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer style={{ padding: '2rem', textAlign: 'center', borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
         <p>Published with VibeKit Studio</p>
       </footer>
